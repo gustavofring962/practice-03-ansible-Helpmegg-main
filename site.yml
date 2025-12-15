@@ -1,0 +1,8 @@
+---
+- name: Налаштування Flask-додатку та Nginx
+  hosts: local
+  become: true
+  tasks:
+    - name: Run the lab
+      ansible.builtin.include_role:
+        name: "practice"

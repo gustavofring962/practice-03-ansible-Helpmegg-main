@@ -1,0 +1,30 @@
+- name: Cleanup
+  hosts: local
+  become: true
+  vars:
+    app_dir: /opt/sample
+  tasks:
+    - name: Remove packages
+      apt:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - nginx
+    - name: Stop flask_app.service
+      ansible.builtin.systemd:
+        name: flask_app.service
+        state: stopped
+        enabled: no
+    - name: Remove flask_app.service
+      ansible.builtin.file:
+        path: /etc/systemd/system/flask_app.service
+        state: absent
+    - name: Reload Systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
+    - name: Force delete Unit
+      ansible.builtin.shell: systemctl reset-failed
+    - name: Remove {{ app_dir }}
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: absent

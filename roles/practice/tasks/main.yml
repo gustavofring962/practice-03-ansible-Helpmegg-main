@@ -1,0 +1,73 @@
+---
+# 1. Встановлення необхідних пакунків
+- name: 1.1. Install required packages
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+    update_cache: yes
+    cache_valid_time: "{{ apt_cache_valid_time }}"
+
+# 2. Налаштування Flask-додатку
+- name: 2.1. Create application directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: 2.2. Copy app.py and rename to {{ app_file }}
+  ansible.builtin.copy:
+    src: files/app.py
+    dest: "{{ app_dir }}/{{ app_file }}"
+    mode: '0644'
+
+- name: 2.3. Create static subdirectory
+  ansible.builtin.file:
+    path: "{{ app_dir }}/static"
+    state: directory
+    mode: '0755'
+
+- name: 2.4. Copy cat.gif to static subdirectory
+  ansible.builtin.copy:
+    src: files/static/cat.gif
+    dest: "{{ app_dir }}/static/cat.gif"
+    mode: '0644'
+
+# 3. Віртуальне середовище Python
+- name: 3.1. Copy requirements.txt to app directory
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "{{ app_dir }}/requirements.txt"
+    mode: '0644'
+
+- name: 3.2. Install Python dependencies into venv
+  ansible.builtin.pip:
+    requirements: "{{ app_dir }}/requirements.txt"
+    virtualenv: "{{ app_dir }}/venv"
+    virtualenv_command: /usr/bin/python3 -m venv
+    state: present
+
+# 4. Створення systemd service unit для Flask-додатку
+- name: 4.1. Configure and deploy systemd service file
+  ansible.builtin.template:
+    src: flask_app.service.j2
+    dest: /etc/systemd/system/flask_app.service
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart flask_app
+
+# 5. Налаштування Nginx як зворотного проксі
+- name: 5.1. Configure and deploy Nginx config file
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/sites-available/default
+    mode: '0644'
+  notify:
+    - Restart nginx
+
+# 6. Ввімкнути та запустити сервіс flask_app
+- name: 6.1. Enable and start flask_app service
+  ansible.builtin.systemd:
+    name: flask_app
+    enabled: yes
+    state: started
